@@ -1,0 +1,22 @@
+{
+  "max_recalled_memories": 2,
+  "memory_write_enabled": true,
+  "persona": {
+    "default_role_id": "launch-companion-v0",
+    "default_voice_id": "companion-calm-v1"
+  },
+  "latency_budget_ms": {
+    "asr": 700,
+    "context_assembly": 250,
+    "llm_first_token": 900,
+    "safety_total": 150,
+    "tts_first_chunk": 500,
+    "end_to_first_audio": 2500
+  },
+  "fallback_messages": {
+    "soft_redirect": "I cannot help with that, but we can stay with what you are feeling right now.",
+    "firm_refusal": "I cannot continue in that direction. If you want, we can talk about what you need next.",
+    "supportive_risk_response": "I am glad you said that out loud. Please reach out to a trusted person or local emergency support right now, and move away from anything that could hurt you.",
+    "technical_recovery": "I had trouble responding just now. Please try again in a moment."
+  }
+}
