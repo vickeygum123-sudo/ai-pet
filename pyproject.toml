@@ -1,0 +1,19 @@
+[project]
+name = "ai-orchestrator"
+version = "0.1.0"
+description = "MVP AI pet repository with AI orchestration and backend foundation workstreams."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.135,<1.0",
+    "pydantic>=2.12,<3.0",
+    "sqlalchemy>=2.0,<3.0",
+    "alembic>=1.18,<2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "httpx>=0.28,<1.0",
+]
+
+[tool.unittest]
+testpaths = ["tests"]
