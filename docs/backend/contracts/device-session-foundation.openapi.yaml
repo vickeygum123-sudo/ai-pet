@@ -1,0 +1,648 @@
+openapi: 3.1.0
+info:
+  title: AI Pet MVP Backend Device Session Foundation API
+  version: 0.1.0
+  description: >
+    Backend contract draft for the MVP foundation covering account, device,
+    bind, session, entitlement lookup, and admin query endpoints. Endpoints
+    using account context currently rely on the MVP placeholder auth header
+    `X-Account-Id`.
+servers:
+  - url: https://api.example.com
+tags:
+  - name: Accounts
+  - name: Devices
+  - name: Bindings
+  - name: Sessions
+  - name: Entitlements
+  - name: Admin
+paths:
+  /v1/accounts:
+    post:
+      tags: [Accounts]
+      summary: Create an MVP account record after upstream auth succeeds.
+      operationId: createAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccountRequest'
+      responses:
+        '201':
+          description: Account created.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+  /v1/accounts/me:
+    get:
+      tags: [Accounts]
+      summary: Return the authenticated account profile.
+      operationId: getMe
+      security:
+        - AccountIdHeader: []
+      responses:
+        '200':
+          description: Current account.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+        '401':
+          $ref: '#/components/responses/AuthHeaderRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/internal/devices:
+    post:
+      tags: [Devices]
+      summary: Register a device identity and pairing code.
+      operationId: registerDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterDeviceRequest'
+      responses:
+        '201':
+          description: Device registered.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+  /v1/device-bindings:
+    post:
+      tags: [Bindings]
+      summary: Bind a pairing-ready device to the authenticated account.
+      operationId: bindDevice
+      security:
+        - AccountIdHeader: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BindDeviceRequest'
+      responses:
+        '201':
+          description: Device bound.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BindingRecord'
+        '401':
+          $ref: '#/components/responses/AuthHeaderRequired'
+        '409':
+          $ref: '#/components/responses/BindTargetUnavailable'
+  /v1/device-bindings/{deviceId}:
+    delete:
+      tags: [Bindings]
+      summary: Unbind a device from the authenticated account.
+      operationId: unbindDevice
+      security:
+        - AccountIdHeader: []
+      parameters:
+        - name: deviceId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Device unbound.
+        '401':
+          $ref: '#/components/responses/AuthHeaderRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/entitlements/me:
+    get:
+      tags: [Entitlements]
+      summary: Return the current account entitlement snapshot.
+      operationId: getMyEntitlement
+      security:
+        - AccountIdHeader: []
+      responses:
+        '200':
+          description: Entitlement snapshot.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntitlementSnapshot'
+        '401':
+          $ref: '#/components/responses/AuthHeaderRequired'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /v1/device-sessions:
+    post:
+      tags: [Sessions]
+      summary: Open a session for a bound device interaction.
+      operationId: startDeviceSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartSessionRequest'
+      responses:
+        '201':
+          description: Session started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /v1/device-sessions/{sessionId}:
+    patch:
+      tags: [Sessions]
+      summary: Update session state or terminal outcome.
+      operationId: updateDeviceSession
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateSessionRequest'
+      responses:
+        '200':
+          description: Session updated.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '422':
+          $ref: '#/components/responses/ValidationError'
+  /v1/admin/overview:
+    get:
+      tags: [Admin]
+      summary: Return the MVP admin overview counters.
+      operationId: getAdminOverview
+      responses:
+        '200':
+          description: Overview counters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminOverview'
+  /v1/admin/devices:
+    get:
+      tags: [Admin]
+      summary: List devices with basic operational filters.
+      operationId: listAdminDevices
+      parameters:
+        - name: bindStatus
+          in: query
+          schema:
+            $ref: '#/components/schemas/BindStatus'
+        - name: ownerAccountId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Device list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Device'
+  /v1/admin/sessions:
+    get:
+      tags: [Admin]
+      summary: List sessions for admin inspection.
+      operationId: listAdminSessions
+      parameters:
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/SessionState'
+        - name: failureCode
+          in: query
+          schema:
+            $ref: '#/components/schemas/FailureCode'
+        - name: accountId
+          in: query
+          schema:
+            type: string
+        - name: deviceId
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session list.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Session'
+  /v1/admin/sessions/{sessionId}:
+    get:
+      tags: [Admin]
+      summary: Return the admin session detail view.
+      operationId: getAdminSessionDetail
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Session detail.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Session'
+        '404':
+          $ref: '#/components/responses/NotFound'
+components:
+  securitySchemes:
+    AccountIdHeader:
+      type: apiKey
+      in: header
+      name: X-Account-Id
+      description: MVP placeholder auth header for account-scoped endpoints only.
+  responses:
+    AuthHeaderRequired:
+      description: Missing placeholder account header.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            missingHeader:
+              value:
+                code: AUTH_HEADER_REQUIRED
+                message: Missing X-Account-Id header for MVP auth placeholder.
+    Conflict:
+      description: General conflict response.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            conflict:
+              value:
+                code: CONFLICT
+                message: Conflict.
+    BindTargetUnavailable:
+      description: Pairing code invalid or target device unavailable for bind.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            pairCodeMissing:
+              value:
+                code: BIND_TARGET_UNAVAILABLE
+                message: Pairing code PAIR-001 was not found.
+    NotFound:
+      description: Requested resource was not found.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            notFound:
+              value:
+                code: NOT_FOUND
+                message: Resource was not found.
+    ValidationError:
+      description: Request body or query validation failed.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorResponse'
+          examples:
+            validationError:
+              value:
+                code: VALIDATION_ERROR
+                message: Request validation failed.
+  schemas:
+    Timestamp:
+      type: string
+      format: date-time
+    EntitlementTier:
+      type: string
+      enum: [free, subscribed]
+    BindStatus:
+      type: string
+      enum: [unbound, bound]
+    DeviceStatus:
+      type: string
+      enum:
+        - pairing_ready
+        - connecting
+        - connected
+        - failed_to_connect
+        - ready_to_speak
+        - offline
+    SessionState:
+      type: string
+      enum:
+        - idle
+        - listening
+        - transcribing
+        - reasoning
+        - synthesizing
+        - speaking
+        - completed
+        - failed
+        - fallback
+    StepStatus:
+      type: string
+      enum: [pending, succeeded, failed, skipped]
+    FailureCode:
+      type: string
+      enum:
+        - AUTH_FAILED
+        - NETWORK_TIMEOUT
+        - ASR_FAILED
+        - CONTEXT_LOAD_FAILED
+        - LLM_TIMEOUT
+        - LLM_FAILED
+        - TTS_FAILED
+        - SAFETY_BLOCKED
+        - UNKNOWN_ERROR
+    CreateAccountRequest:
+      type: object
+      required: [authSubject]
+      properties:
+        authSubject:
+          type: string
+        displayName:
+          type: string
+        defaultRoleId:
+          type: string
+    RegisterDeviceRequest:
+      type: object
+      required: [deviceId, hardwareModel, firmwareVersion, pairingCode]
+      properties:
+        deviceId:
+          type: string
+        hardwareModel:
+          type: string
+        firmwareVersion:
+          type: string
+        pairingCode:
+          type: string
+    BindDeviceRequest:
+      type: object
+      required: [pairingCode]
+      properties:
+        pairingCode:
+          type: string
+    StartSessionRequest:
+      type: object
+      required: [accountId, deviceId, firmwareVersion]
+      properties:
+        accountId:
+          type: string
+        deviceId:
+          type: string
+        firmwareVersion:
+          type: string
+        roleId:
+          type: string
+    UpdateSessionRequest:
+      type: object
+      required: [state]
+      properties:
+        state:
+          $ref: '#/components/schemas/SessionState'
+        asrStatus:
+          $ref: '#/components/schemas/StepStatus'
+        llmStatus:
+          $ref: '#/components/schemas/StepStatus'
+        ttsStatus:
+          $ref: '#/components/schemas/StepStatus'
+        safetyFlag:
+          type: boolean
+        fallbackUsed:
+          type: boolean
+        continuityRecallUsed:
+          type: boolean
+        firstResponseLatencyMs:
+          type: integer
+          minimum: 0
+        failureCode:
+          $ref: '#/components/schemas/FailureCode'
+        notes:
+          type: string
+    Account:
+      type: object
+      required:
+        - accountId
+        - authSubject
+        - defaultRoleId
+        - entitlementTier
+        - createdAt
+      properties:
+        accountId:
+          type: string
+        authSubject:
+          type: string
+        displayName:
+          type: string
+          nullable: true
+        defaultRoleId:
+          type: string
+        entitlementTier:
+          $ref: '#/components/schemas/EntitlementTier'
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+    Device:
+      type: object
+      required:
+        - deviceId
+        - hardwareModel
+        - firmwareVersion
+        - deviceStatus
+        - bindStatus
+        - pairingCode
+        - createdAt
+      properties:
+        deviceId:
+          type: string
+        hardwareModel:
+          type: string
+        firmwareVersion:
+          type: string
+        deviceStatus:
+          $ref: '#/components/schemas/DeviceStatus'
+        bindStatus:
+          $ref: '#/components/schemas/BindStatus'
+        ownerAccountId:
+          type: string
+          nullable: true
+        pairingCode:
+          type: string
+        lastOnlineAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        createdAt:
+          $ref: '#/components/schemas/Timestamp'
+    BindingRecord:
+      type: object
+      required: [bindingId, accountId, deviceId, status, boundAt]
+      properties:
+        bindingId:
+          type: string
+        accountId:
+          type: string
+        deviceId:
+          type: string
+        status:
+          $ref: '#/components/schemas/BindStatus'
+        boundAt:
+          $ref: '#/components/schemas/Timestamp'
+        unboundAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+    EntitlementSnapshot:
+      type: object
+      required: [accountId, tier, features]
+      properties:
+        accountId:
+          type: string
+        tier:
+          $ref: '#/components/schemas/EntitlementTier'
+        features:
+          type: object
+          required: [voiceSession, recentContinuityMemory, priorityGeneration]
+          properties:
+            voiceSession:
+              type: boolean
+            recentContinuityMemory:
+              type: boolean
+            priorityGeneration:
+              type: boolean
+    SessionTransition:
+      type: object
+      required: [state, recordedAt]
+      properties:
+        state:
+          $ref: '#/components/schemas/SessionState'
+        recordedAt:
+          $ref: '#/components/schemas/Timestamp'
+        notes:
+          type: string
+          nullable: true
+    Session:
+      type: object
+      required:
+        - sessionId
+        - accountId
+        - deviceId
+        - roleId
+        - entitlementTier
+        - state
+        - asrStatus
+        - llmStatus
+        - ttsStatus
+        - safetyFlag
+        - fallbackUsed
+        - continuityRecallUsed
+        - firmwareVersion
+        - startedAt
+        - transitions
+      properties:
+        sessionId:
+          type: string
+        accountId:
+          type: string
+        deviceId:
+          type: string
+        roleId:
+          type: string
+        entitlementTier:
+          $ref: '#/components/schemas/EntitlementTier'
+        state:
+          $ref: '#/components/schemas/SessionState'
+        asrStatus:
+          $ref: '#/components/schemas/StepStatus'
+        llmStatus:
+          $ref: '#/components/schemas/StepStatus'
+        ttsStatus:
+          $ref: '#/components/schemas/StepStatus'
+        safetyFlag:
+          type: boolean
+        fallbackUsed:
+          type: boolean
+        continuityRecallUsed:
+          type: boolean
+        firstResponseLatencyMs:
+          type: integer
+          nullable: true
+        failureCode:
+          allOf:
+            - $ref: '#/components/schemas/FailureCode'
+          nullable: true
+        firmwareVersion:
+          type: string
+        startedAt:
+          $ref: '#/components/schemas/Timestamp'
+        endedAt:
+          allOf:
+            - $ref: '#/components/schemas/Timestamp'
+          nullable: true
+        transitions:
+          type: array
+          items:
+            $ref: '#/components/schemas/SessionTransition'
+    AdminOverview:
+      type: object
+      required:
+        - totalAccounts
+        - totalDevices
+        - boundDevices
+        - activeSessions
+        - completedSessions
+        - failedSessions
+      properties:
+        totalAccounts:
+          type: integer
+        totalDevices:
+          type: integer
+        boundDevices:
+          type: integer
+        activeSessions:
+          type: integer
+        completedSessions:
+          type: integer
+        failedSessions:
+          type: integer
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
