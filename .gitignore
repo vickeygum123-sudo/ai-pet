@@ -1,0 +1,36 @@
+# macOS / editors
+.DS_Store
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Local databases and runtime artifacts
+*.db
+*.sqlite
+*.sqlite3
+tmp/
+
+# Node / frontend build outputs
+node_modules/
+dist/
+
+# Arduino / firmware build outputs
+firmware/arduino/build/
+*.bin
+*.elf
+*.map
