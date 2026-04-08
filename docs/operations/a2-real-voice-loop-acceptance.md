@@ -285,6 +285,10 @@ Automated regression coverage already exists in:
    - A2 Golden Path is marked `PASS`
    - exposed DeepSeek key rotation is tracked as a security exception
    - post-rotation retest is moved to `ops-release readiness`
+5. MVP baseline acceptance record:
+   - Python/backend/AI/firmware-simulator baseline verification passed
+   - frontend build checks are blocked by local Node/npm availability, not by a known code failure
+   - baseline freeze and forward progress remain unblocked
 
 ## Security Exception
 
